@@ -1,32 +1,86 @@
-import React, { useDebugValue, useState } from "react";
-import { assets } from "../assets/assets";
+import React, { useContext, useState } from "react";
+import { AppContext } from "../context/AppContext";
+import {assets} from '../assets/assets'
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const MyProfile = () => {
-  const [userData, setUserdata] = useState({
-    name: "Rahul Shukla",
-    image: assets.profile_pic,
-    email: "rahul@gmail.com",
-    phone: "1098765432",
-    address: {
-      line1: "Indra Park, Palam Colony",
-      line2: "New Delhi, India",
-    },
-    gender: "Male",
-    dob: "29-11-2003",
-  });
+  const{userData,setUserData,token,backendUrl,loadUserProfileData} = useContext(AppContext);
 
   const [isEdit, setIsEdit] = useState(false);
+  const [image,setImage] = useState(false);
 
+  const updateUserProfileData = async () => {
+    try {
+      const formData = new FormData();
+      formData.append('name', userData.name);
+      formData.append('phone', userData.phone);
+      formData.append('address', JSON.stringify(userData.address));
+      formData.append('gender', userData.gender);
+      formData.append('dob', userData.dob);
+      image && formData.append('image', image);
+      const {data} = await axios.post(backendUrl + "/api/user/update-profile", formData, {headers:{token}})
+      if(data.success){
+        toast.success(data.message);
+        await loadUserProfileData();
+        setIsEdit(false);
+        setImage(false);
+      }else{
+        toast.error(data.message);
+      }
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message);
+    }
+  }
+
+  if (!userData || Object.keys(userData).length === 0) {
   return (
+    <div className="max-w-lg flex flex-col gap-2 text-sm animate-pulse">
+      <div className="w-36 h-36 bg-gray-200 rounded"></div>
+      <div className="h-6 w-3/5 bg-gray-200 rounded mt-4"></div>
+      <hr className="bg-zinc-400 h-[1px] border-none my-2"/>
+      
+      <div>
+        <div className="h-4 w-1/4 bg-gray-200 rounded mb-3"></div>
+        {[...Array(5)].map((_, i) => (
+          <div key={i} className="h-4 w-full bg-gray-200 rounded mb-2"></div>
+        ))}
+      </div>
+
+      <div>
+        <div className="h-4 w-1/4 bg-gray-200 rounded my-4"></div>
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="h-4 w-full bg-gray-200 rounded mb-2"></div>
+        ))}
+      </div>
+
+      <div className="w-32 h-10 bg-gray-300 rounded-full mt-8"></div>
+    </div>
+  );
+}
+
+
+  return userData && (
     <div className="max-w-lg flex flex-col gap-2 text-sm">
-      <img className="w-36 rounded" src={userData.image} alt="" />
+      {
+        isEdit 
+        ? <label htmlFor="image">
+          <div className="inline-block relative cursor-pointer">
+            <img className="w-36 rounded opacity-75" src={image ? URL.createObjectURL(image) : userData.image} alt="" />
+            <img className="w-10 absolute bottom-12 right-12" src={image ? null : assets.upload_icon} alt="" />
+          </div>
+          <input onChange={(e)=>setImage(e.target.files[0])} type="file" id="image" hidden />
+        </label>
+        : <img className="w-36 rounded" src={userData.image} alt="" />
+      }
       {isEdit ? (
         <input
           className="bg-gray-50 text-3xl font-medium max-w-60 mt-4"
           type="text"
           value={userData.name}
           onChange={(e) =>
-            setUserdata((prev) => ({ ...prev, name: e.target.value }))
+            setUserData((prev) => ({ ...prev, name: e.target.value }))
           }
         />
       ) : (
@@ -45,7 +99,7 @@ const MyProfile = () => {
               type="tel"
               value={userData.phone}
               onChange={(e) =>
-                setUserdata((prev) => ({ ...prev, phone: e.target.value }))
+                setUserData((prev) => ({ ...prev, phone: e.target.value }))
               }
             />
           ) : (
@@ -59,7 +113,7 @@ const MyProfile = () => {
                 type="text"
                 value={userData.address.line1}
                 onChange={(e) =>
-                  setUserdata((prev) => ({
+                  setUserData((prev) => ({
                     ...prev,
                     address: { ...prev.address, line1: e.target.value },
                   }))
@@ -71,7 +125,7 @@ const MyProfile = () => {
                 type="text"
                 value={userData.address.line2}
                 onChange={(e) =>
-                  setUserdata((prev) => ({
+                  setUserData((prev) => ({
                     ...prev,
                     address: { ...prev.address, line2: e.target.value },
                   }))
@@ -79,14 +133,14 @@ const MyProfile = () => {
               />
             </p>
           ) : (
-            <p className="text-gray-500">
+            <div className="text-gray-500">
               <p className="mb-1">
                 {userData.address.line1}
               </p>
               <p className="mt-1">
                 {userData.address.line2}
               </p>
-            </p>
+            </div>
           )}
         </div>
       </div>
@@ -98,7 +152,7 @@ const MyProfile = () => {
             <select
               className="max-w-20 bg-gray-100"
               onChange={(e) =>
-                setUserdata((prev) => ({ ...prev, gender: e.target.value }))
+                setUserData((prev) => ({ ...prev, gender: e.target.value }))
               }
               value={userData.gender}
             >
@@ -111,7 +165,7 @@ const MyProfile = () => {
           <p className="font-medium">Date of Birth</p>
           {
             isEdit
-            ? <input className="max-w-28 bg-gray-100" type="date" onChange={(e) =>setUserdata(prev => ({ ...prev, dob: e.target.value }))} value={userData.dob}/>
+            ? <input className="max-w-28 bg-gray-100" type="date" onChange={(e) =>setUserData(prev => ({ ...prev, dob: e.target.value }))} value={userData.dob}/>
             : <p className="text-gray-500">{userData.dob}</p>
           }
         </div>
@@ -119,7 +173,7 @@ const MyProfile = () => {
       <div className="mt-10">
         {
           isEdit
-          ? <button className="border border-[var(--color-primary)] px-8 py-2 rounded-full hover:bg-[var(--color-primary)] hover:text-white transition-all duration 300" onClick={() => setIsEdit(false)}>Save Information</button>
+          ? <button className="border border-[var(--color-primary)] px-8 py-2 rounded-full hover:bg-[var(--color-primary)] hover:text-white transition-all duration 300" onClick={updateUserProfileData}>Save Information</button>
           : <button className="border border-[var(--color-primary)] px-8 py-2 rounded-full hover:bg-[var(--color-primary)] hover:text-white transition-all duration 300" onClick={() => setIsEdit(true)}>Edit</button>
         }
       </div>
